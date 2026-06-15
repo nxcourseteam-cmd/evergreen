@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A remembrance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Hanken+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ground:#E9EBE3; --paper:#FBFAF6; --ink:#21302A; --ink-soft:#5C6660;
+    --ink-faint:#8C948E; --line:rgba(33,48,42,.12); --line-2:rgba(33,48,42,.22);
+    --ever:#34564A; --ever-deep:#244137; --brass:#A2854F; --thread:rgba(52,86,74,.28);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ground); color:var(--ink);
+    font-family:"Hanken Grotesk",system-ui,sans-serif; -webkit-font-smoothing:antialiased;
+    min-height:100vh; display:flex; justify-content:center; padding:28px 16px;
+  }
+  .card{
+    width:100%; max-width:460px; background:var(--paper);
+    border:1px solid var(--line); border-radius:22px; padding:32px 26px 26px;
+    box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 16px 44px -30px rgba(33,48,42,.5);
+  }
+  .eyebrow{text-align:center;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass);font-weight:600;}
+  .name{text-align:center;font-family:"Fraunces",serif;font-weight:500;font-size:32px;line-height:1.08;margin:8px 0 2px;letter-spacing:-.01em;}
+  .span{text-align:center;color:var(--ink-soft);font-size:14px;}
+  .rule{height:1px;background:var(--line);margin:22px 0;}
+
+  .photo{aspect-ratio:4/3;border-radius:14px;background:var(--ground);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;margin-bottom:18px;}
+  .photo img{width:100%;height:100%;object-fit:cover;}
+  .photo .cap{position:absolute;bottom:8px;left:10px;font-size:11px;color:var(--ink-soft);background:var(--paper);padding:2px 8px;border-radius:8px;}
+  .photo .ph{color:var(--ink-faint);font-size:13px;}
+
+  .now{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .av{width:44px;height:44px;border-radius:50%;background:rgba(52,86,74,.13);color:var(--ever-deep);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:15px;flex-shrink:0;}
+  .now .nm{font-size:16px;font-weight:600;line-height:1.2;}
+  .now .rl{font-size:13px;color:var(--ink-soft);}
+
+  .bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;margin:6px 0 4px;}
+  .bar > div{height:100%;width:0;background:var(--ever);transition:width .2s linear;}
+  .times{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-faint);font-variant-numeric:tabular-nums;}
+
+  .controls{display:flex;justify-content:center;gap:10px;margin:14px 0 4px;}
+  .controls button{width:46px;height:46px;border-radius:50%;border:1px solid var(--line-2);background:transparent;color:var(--ever);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .controls .play{width:60px;height:60px;background:var(--ever);color:var(--paper);border:none;}
+  .controls button:hover{background:rgba(52,86,74,.07);}
+  .controls .play:hover{background:var(--ever-deep);}
+  .controls svg{width:20px;height:20px;}
+  .controls .play svg{width:24px;height:24px;}
+
+  .voices{margin-top:8px;border-top:1px solid var(--line);}
+  .voice{display:flex;gap:12px;padding:14px 4px;border-bottom:1px solid var(--line);cursor:pointer;}
+  .voice.active{background:rgba(52,86,74,.05);border-radius:10px;}
+  .voice .vav{width:38px;height:38px;border-radius:50%;background:rgba(162,133,79,.16);color:#7d652f;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;flex-shrink:0;}
+  .voice .vbody{flex:1;min-width:0;}
+  .voice .vname{font-size:15px;font-weight:600;}
+  .voice .vrel{font-size:12px;color:var(--ink-soft);}
+  .voice .vsum{font-size:13px;color:var(--ink-soft);font-style:italic;margin-top:3px;line-height:1.4;}
+
+  .foot{text-align:center;font-size:12.5px;color:var(--ink-faint);line-height:1.5;margin-top:22px;padding-top:18px;border-top:1px solid var(--line);}
+  .state{text-align:center;color:var(--ink-soft);font-size:15px;padding:40px 0;}
+</style>
+</head>
+<body>
+  <main class="card" id="card">
+    <div class="state" id="state">Loading the remembrance…</div>
+  </main>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+const SUPABASE_URL = "https://qsrppeyoqkcmspvdbpbp.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFzcnBwZXlvcWtjbXNwdmRicGJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0NzM5ODAsImV4cCI6MjA5NzA0OTk4MH0.qErfx0flvVqxgIoCyr_z3D3O2LYIOYWZbuizrx5Fti8";
+// ────────────────────────────────────────────────────────
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function slugFromUrl(){
+  // supports /m/{slug} path, or ?slug=... for local testing
+  const q = new URLSearchParams(location.search).get('slug');
+  if (q) return q;
+  const m = location.pathname.match(/\/m\/([^/]+)/);
+  return m ? m[1] : null;
+}
+
+function fmt(s){ s=Math.max(0,Math.round(s)); const m=Math.floor(s/60), r=s%60; return m+":"+(r<10?"0":"")+r; }
+function initials(n){ return (n||'').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
+function esc(t){ return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function load(){
+  const slug = slugFromUrl();
+  const state = document.getElementById('state');
+  if(!slug){ state.textContent = "No remembrance specified."; return; }
+
+  // join memorials -> episodes by slug
+  const { data: mem, error: e1 } = await sb
+    .from('memorials').select('id, deceased_name, born, died, slug').eq('slug', slug).maybeSingle();
+  if(e1 || !mem){ state.textContent = "We couldn't find this remembrance."; return; }
+
+  const { data: ep, error: e2 } = await sb
+    .from('episodes').select('cue_sheet, combined_audio_url, status').eq('memorial_id', mem.id).maybeSingle();
+  if(e2 || !ep || ep.status !== 'published'){ state.textContent = "This remembrance isn't published yet."; return; }
+
+  let cue = ep.cue_sheet;
+  if(typeof cue === 'string'){ try{ cue = JSON.parse(cue); }catch{ cue = null; } }
+  if(!cue){ state.textContent = "This remembrance is still being prepared."; return; }
+
+  render(cue);
+}
+
+function render(cue){
+  const card = document.getElementById('card');
+  const m = cue.memorial || {};
+  const segs = cue.segments || [];
+  const montage = cue.montage || [];
+  const audioUrl = (cue.audio && cue.audio.url) || '';
+
+  card.innerHTML = `
+    <div class="eyebrow">in loving memory</div>
+    <h1 class="name">${esc(m.name)}</h1>
+    <div class="span">${esc(m.lifespan||'')}</div>
+    <div class="rule"></div>
+
+    <div class="photo" id="photo">
+      <span class="ph">photographs</span>
+    </div>
+
+    <div class="now">
+      <div class="av" id="av">—</div>
+      <div><div class="nm" id="nm">—</div><div class="rl" id="rl"></div></div>
+    </div>
+
+    <div class="bar"><div id="fill"></div></div>
+    <div class="times"><span id="cur">0:00</span><span id="dur">${fmt((cue.audio&&cue.audio.duration_sec)||0)}</span></div>
+
+    <div class="controls">
+      <button id="prev" aria-label="previous"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h2v14H6zM20 5L9 12l11 7z"/></svg></button>
+      <button class="play" id="play" aria-label="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+      <button id="next" aria-label="next"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 5h2v14h-2zM4 5l11 7L4 19z"/></svg></button>
+    </div>
+
+    <div class="voices" id="voices"></div>
+
+    <p class="foot">Loved ones may still add their memories — before the service and after.</p>
+    <audio id="audio" src="${esc(audioUrl)}" preload="metadata"></audio>
+  `;
+
+  // build roster
+  const voices = document.getElementById('voices');
+  segs.forEach((s,i)=>{
+    const sp = s.speaker||{};
+    const row = document.createElement('div');
+    row.className='voice'; row.id='v'+i;
+    row.innerHTML = `
+      <div class="vav">${esc(sp.initials||initials(sp.name))}</div>
+      <div class="vbody">
+        <div class="vname">${esc(sp.name||'A loved one')}</div>
+        <div class="vrel">${esc(sp.relationship||'')}</div>
+        ${sp.summary?`<div class="vsum">${esc(sp.summary)}</div>`:''}
+      </div>`;
+    row.onclick=()=>{ audio.currentTime = s.start_sec + 0.1; if(audio.paused) audio.play(); };
+    voices.appendChild(row);
+  });
+
+  const audio = document.getElementById('audio');
+  const playBtn = document.getElementById('play');
+  const fill = document.getElementById('fill');
+  const PLAY='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+  const PAUSE='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+
+  function activeSeg(t){
+    for(let i=segs.length-1;i>=0;i--){ if(t >= segs[i].start_sec) return i; }
+    return 0;
+  }
+  function paintSpeaker(i){
+    const sp = segs[i].speaker||{};
+    document.getElementById('av').textContent = sp.initials||initials(sp.name)||'—';
+    document.getElementById('nm').textContent = sp.name||'A loved one';
+    document.getElementById('rl').textContent = sp.relationship||'';
+    segs.forEach((_,k)=>document.getElementById('v'+k).classList.toggle('active', k===i));
+    // photo: prefer this segment's tagged photo, else cycle montage
+    const photo = document.getElementById('photo');
+    const segPhotos = segs[i].photos||[];
+    const pick = segPhotos[0] || montage[i % Math.max(montage.length,1)];
+    if(pick && pick.url && !pick.url.includes('cdn.evergreen.life')){
+      photo.innerHTML = `<img src="${esc(pick.url)}" alt=""/>${pick.caption?`<span class="cap">${esc(pick.caption)}</span>`:''}`;
+    }
+  }
+
+  let lastSeg=-1;
+  audio.addEventListener('timeupdate',()=>{
+    const t=audio.currentTime, d=audio.duration||1;
+    fill.style.width=(t/d*100)+'%';
+    document.getElementById('cur').textContent=fmt(t);
+    const i=activeSeg(t);
+    if(i!==lastSeg){ lastSeg=i; paintSpeaker(i); }
+  });
+  audio.addEventListener('play',()=>playBtn.innerHTML=PAUSE);
+  audio.addEventListener('pause',()=>playBtn.innerHTML=PLAY);
+  audio.addEventListener('ended',()=>playBtn.innerHTML=PLAY);
+  playBtn.onclick=()=>{ audio.paused?audio.play():audio.pause(); };
+  document.getElementById('prev').onclick=()=>{ const i=activeSeg(audio.currentTime); const target=(audio.currentTime-segs[i].start_sec>2||i===0)?i:i-1; audio.currentTime=segs[target].start_sec+0.1; };
+  document.getElementById('next').onclick=()=>{ const i=activeSeg(audio.currentTime); const n=Math.min(i+1,segs.length-1); audio.currentTime=segs[n].start_sec+0.1; };
+
+  paintSpeaker(0);
+}
+
+load();
+</script>
+</body>
+</html>
